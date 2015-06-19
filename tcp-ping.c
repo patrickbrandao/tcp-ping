@@ -30,6 +30,9 @@ int received=0;
 int ip_version = 4;	// 4=ipv4, 6=ipv6
 int addrtype = AF_INET;
 
+struct sin6_addr ipv6addr;
+struct sin_addr ipv4addr;
+
 struct hostent *host;			// host alvo resolvido
 
 // dados da conexao em andamento
@@ -135,7 +138,7 @@ void do_tcp_connect(){
 	if(ip_version==6){
 		// IPv6
 		bzero(&server6, sizeof(server6));
-		server6.sin6_addr =*((struct in6_addr*)host->h_addr);
+		server6.sin6_addr = ipv6addr; // *((struct in6_addr*)host->h_addr);
 		server6.sin6_port = htons(port);
 		server6.sin6_family = AF_INET6;
 
@@ -148,7 +151,7 @@ void do_tcp_connect(){
 	}else{
 		// IPv4
 		bzero(&server4, sizeof(server4));
-		server4.sin_addr =*((struct in_addr*)host->h_addr);
+		server4.sin_addr = ipv4addr; // *((struct in_addr*)host->h_addr);
 		server4.sin_port = htons(port);
 		server4.sin_family = AF_INET;
 
@@ -227,7 +230,7 @@ void finish(){
 
 
 int main (int argc, char **argv) {
-	
+	char tmpstr[INET6_ADDRSTRLEN];
 	int ch;
 	int c;
 
@@ -290,7 +293,26 @@ int main (int argc, char **argv) {
 	signal(SIGALRM, sigalarm);
 
 
-	printf("tcp-ping host=%s address=%s port=%d\n", target, inet_ntoa(*((struct in_addr *)host->h_addr)), port);
+
+	if(ip_version==6){
+		inet_ntop(AF_INET6, *host->h_addr_list, tmpstr, sizeof(tmpstr));
+		printf("tcp-ping6 host=%s address=%s port=%d\n", target, tmpstr, port);
+	
+		// preencher ip binario	
+		inet_pton(AF_INET6, tmpstr, &(ipv6addr));
+		
+	}else{
+		//printf("tcp-ping host=%s address=%s port=%d\n", target, inet_ntoa(*((struct in_addr *)host->h_addr)), port);
+
+		inet_ntop(AF_INET, *host->h_addr_list, tmpstr, sizeof(tmpstr));
+		printf("tcp-ping host=%s address=%s port=%d\n", target, tmpstr, port);
+
+		// preencher ipv4 inteiro
+		ipv4addr = inet_pton(tmpstr);
+
+	}
+	// printf("tcp-ping host=%s address=%s port=%d\n", target, inet_ntoa(*((struct in_addr *)host->h_addr)), port);
+
 	for(c=0;c<count;c++){
 		//printf("loop %d\n", c);
 		do_tcp_connect();
