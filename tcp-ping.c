@@ -30,8 +30,8 @@ int received=0;
 int ip_version = 4;	// 4=ipv4, 6=ipv6
 int addrtype = AF_INET;
 
-struct sin6_addr ipv6addr;
-struct sin_addr ipv4addr;
+struct in6_addr ipv6addr;
+struct in_addr ipv4addr;
 
 struct hostent *host;			// host alvo resolvido
 
@@ -295,20 +295,39 @@ int main (int argc, char **argv) {
 
 
 	if(ip_version==6){
+
+		// Obter ipv6 (128bits)
+		ipv6addr = *((struct in6_addr *)host->h_addr);
+
+
 		inet_ntop(AF_INET6, *host->h_addr_list, tmpstr, sizeof(tmpstr));
 		printf("tcp-ping6 host=%s address=%s port=%d\n", target, tmpstr, port);
-	
+
 		// preencher ip binario	
-		inet_pton(AF_INET6, tmpstr, &(ipv6addr));
+		// inet_pton(AF_INET6, tmpstr, &(ipv6addr));
 		
 	}else{
 		//printf("tcp-ping host=%s address=%s port=%d\n", target, inet_ntoa(*((struct in_addr *)host->h_addr)), port);
+
+		// Obter ipv4 (32bits)
+		ipv4addr = *((struct in_addr *)host->h_addr);
 
 		inet_ntop(AF_INET, *host->h_addr_list, tmpstr, sizeof(tmpstr));
 		printf("tcp-ping host=%s address=%s port=%d\n", target, tmpstr, port);
 
 		// preencher ipv4 inteiro
-		ipv4addr = inet_pton(tmpstr);
+		// ipv4addr = inet_pton(tmpstr);
+		
+		// inet_pton(AF_INET, tmpstr, void *dst);
+		/*
+			struct hostent {
+				char  *h_name;            // official name of host
+				char **h_aliases;         // alias list
+				int    h_addrtype;        // host address type
+				int    h_length;          // length of address
+				char **h_addr_list;       // list of addresses
+			}
+		*/
 
 	}
 	// printf("tcp-ping host=%s address=%s port=%d\n", target, inet_ntoa(*((struct in_addr *)host->h_addr)), port);
