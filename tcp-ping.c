@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include  <signal.h>
+#include <signal.h>
 #include <sys/time.h>
 #include <stdlib.h>
 #include <math.h>
@@ -40,6 +40,28 @@ int replied = 0;
 int sockfd=0;
 
 //--------------------------------------------------------------------------------------------------------
+
+void print_in6_addr(struct in6_addr *in6addr){
+    char str6[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, in6addr, str6, INET6_ADDRSTRLEN);
+	printf("   struct in6_addr:\n");
+	printf("    unsigned char s6_addr[16]: ");
+	printf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x -> [%s]\n",
+		in6addr->s6_addr[0], in6addr->s6_addr[1], in6addr->s6_addr[2], in6addr->s6_addr[3],
+		in6addr->s6_addr[4], in6addr->s6_addr[5], in6addr->s6_addr[6], in6addr->s6_addr[7],
+		in6addr->s6_addr[8], in6addr->s6_addr[9], in6addr->s6_addr[10], in6addr->s6_addr[11],
+		in6addr->s6_addr[12], in6addr->s6_addr[13], in6addr->s6_addr[14], in6addr->s6_addr[15],
+		str6
+	);
+}
+void print_sockaddr_in6(struct sockaddr_in6 *sin6){
+	printf("  struct sockaddr_in6:\n");
+	printf("  .u_char sin6_len...........: %d ", sin6->sin6_family);
+	printf("  .in_port_t sin6_port.......: %d\n", sin6->sin6_port);
+	printf("  .u_char sin6_flowinfo......: %d ", sin6->sin6_flowinfo);
+	print_in6_addr(&sin6->sin6_addr);
+	printf("  .u_char sin6_len...........: %d\n", sin6->sin6_scope_id);
+}
 
 
 void print_ping(int status);
@@ -129,6 +151,11 @@ void print_ping(int status){
 
 }
 
+void error(char *msg) {
+    perror(msg);
+    exit(0);
+}
+
 void do_tcp_connect(){
 	int cret = 0;
 	
@@ -136,21 +163,29 @@ void do_tcp_connect(){
 	struct sockaddr_in server4;
 
 	if(ip_version==6){
-		// IPv6
-		bzero(&server6, sizeof(server6));
-		server6.sin6_addr = ipv6addr; // *((struct in6_addr*)host->h_addr);
-		server6.sin6_port = htons(port);
+		// do_tcp_connect6(); return;
+
+		// IPv6	
+		memset((char *) &server6, 0, sizeof(server6));
+		server6.sin6_flowinfo = 0;
 		server6.sin6_family = AF_INET6;
+		server6.sin6_addr = ipv6addr;
+		server6.sin6_port = htons(port);
+
 
 		// abrir tomada
-		if ((sockfd = socket(AF_INET6, SOCK_STREAM, 0)) == -1) {
+		sockfd = socket(AF_INET6, SOCK_STREAM, 0);
+		if (sockfd < 0){
 			fprintf(stderr,"error=socket problem\n");
 			exit(1);
 		}
 
 	}else{
 		// IPv4
-		bzero(&server4, sizeof(server4));
+		// bzero(&server4, sizeof(server4));
+
+		memset((char *) &server4, 0, sizeof(server4));
+
 		server4.sin_addr = ipv4addr; // *((struct in_addr*)host->h_addr);
 		server4.sin_port = htons(port);
 		server4.sin_family = AF_INET;
@@ -179,7 +214,7 @@ void do_tcp_connect(){
 	disarm = 0;
 	
 	if(ip_version == 6){
-		cret = connect(sockfd, (struct sockaddr*)&server6, sizeof(struct sockaddr));
+		cret = connect(sockfd, (struct sockaddr *) &server6, sizeof(server6));
 	}else{
 		cret = connect(sockfd, (struct sockaddr*)&server4, sizeof(struct sockaddr));
 	}
@@ -236,6 +271,8 @@ int main (int argc, char **argv) {
 
 // ----------------------------------------------------------------------
 // 		"Usage: tcp-ping [-f] [-c count] [-w timeout] [-p port] [-t interval] destination\n"
+
+	port = 0;
 
 	while ((ch = getopt(argc, argv, "hf64c:w:p:t:i:")) != EOF) {
 		switch(ch) {
